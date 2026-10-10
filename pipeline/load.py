@@ -1,8 +1,10 @@
 """LOAD: guarda los partidos limpios en DuckDB (tabla raw.matches).
 
-Carga incremental (upsert): la tabla tiene clave primaria por partido. Si el partido
-ya existe se actualiza (p. ej. se jugó y ahora tiene resultado); si no, se inserta.
-Con full_refresh=True se borra la tabla y se carga desde cero.
+Carga incremental por partición: cada archivo de origen es una liga-temporada. Cuando
+un archivo cambia, se borran TODOS los partidos de esa liga-temporada y se insertan
+los nuevos, dentro de una transacción. Así un partido que desaparece o cambia de clave
+en la fuente (p. ej. un equipo renombrado) no deja filas obsoletas, y las demás
+ligas-temporadas no se tocan. Con full_refresh=True se borra la tabla entera.
 """
 import logging
 
@@ -45,7 +47,20 @@ def load(df: pd.DataFrame, full_refresh: bool = False) -> None:
             log.info("No hay partidos nuevos que cargar")
             return
 
-        # DuckDB puede leer el DataFrame `df` directamente por su nombre
-        con.execute("INSERT OR REPLACE INTO raw.matches SELECT *, now() FROM df")
+        partitions = df[["league_code", "season"]].drop_duplicates()
+        con.execute("BEGIN TRANSACTION")
+        try:
+            # DuckDB puede leer los DataFrames `partitions` y `df` directamente por su nombre
+            con.execute("""
+                DELETE FROM raw.matches m
+                USING partitions p
+                WHERE m.league_code = p.league_code AND m.season = p.season
+            """)
+            con.execute("INSERT INTO raw.matches SELECT *, now() FROM df")
+            con.execute("COMMIT")
+        except Exception:
+            con.execute("ROLLBACK")  # si algo falla, la tabla queda como estaba
+            raise
         total = con.execute("SELECT COUNT(*) FROM raw.matches").fetchone()[0]
-        log.info("raw.matches: %d filas cargadas/actualizadas, %d en total", len(df), total)
+        log.info("raw.matches: %d ligas-temporada reemplazadas (%d filas), %d filas en total",
+                 len(partitions), len(df), total)

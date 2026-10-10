@@ -12,7 +12,7 @@ openfootball (JSON)
       ▼
 data/raw/*.json                       capa raw: datos tal cual
       │  TRANSFORM (pandas: aplanar, tipar, deduplicar, normalizar formatos)
-      │  LOAD      (upsert en DuckDB por clave primaria de partido)
+      │  LOAD      (reemplazo transaccional de cada liga-temporada modificada)
       ▼
 raw.matches
       │  dbt build (modelos + 13 tests de calidad de datos)
@@ -43,7 +43,11 @@ start site\index.html                                            # abrir el dash
 
 .\.venv\Scripts\python consultas.py "LaLiga" 2026-27             # clasificación en consola
 .\.venv\Scripts\python -m pytest                                 # tests de Python
+.\.venv\Scripts\python verificar.py                              # chequeo del resultado
 ```
+
+La verificación tiene tres niveles: `pytest` prueba el código, `dbt build` prueba los
+datos (aborta el pipeline si un test falla) y `verificar.py` revisa el resultado final.
 
 dbt también puede usarse directamente:
 
@@ -60,7 +64,7 @@ $env:DBT_DUCKDB_PATH = "..\data\futbol.duckdb"
 |---|---|
 | `pipeline/extract.py` | Descarga incremental con cabecera `If-None-Match` (ETag) |
 | `pipeline/transform.py` | Normaliza los 4 formatos del marcador y limpia los datos |
-| `pipeline/load.py` | `INSERT OR REPLACE` en `raw.matches` (upsert) o full refresh |
+| `pipeline/load.py` | Reemplaza en una transacción cada liga-temporada que cambió, o full refresh |
 | `pipeline/dashboard.py` | Consulta los marts y genera `site/index.html` |
 | `futbol_dbt/` | Modelos SQL por capas y tests de calidad de datos |
 | `tests/` | Tests unitarios (pytest) de la transformación y la carga |

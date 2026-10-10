@@ -46,6 +46,9 @@ jobs:
       - name: Ejecutar pipeline (extract, load, dbt build, dashboard)
         run: python -m pipeline.run_pipeline
 
+      - name: Verificar resultado
+        run: python verificar.py
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

@@ -1,0 +1,3 @@
+# Guardar todo el texto con saltos de línea LF en el repo (evita los avisos LF/CRLF
+# en Windows y diferencias falsas con el runner Linux de GitHub Actions)
+* text=auto eol=lf
