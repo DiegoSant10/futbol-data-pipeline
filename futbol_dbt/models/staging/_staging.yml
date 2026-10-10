@@ -1,0 +1,25 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Partidos cargados por el pipeline de Python (pipeline/load.py).
+    tables:
+      - name: matches
+        loaded_at_field: loaded_at
+
+models:
+  - name: stg_matches
+    description: Un partido por fila, con identificador único y resultado.
+    columns:
+      - name: match_id
+        data_tests: [unique, not_null]
+      - name: league_name
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Premier League", "LaLiga", "Bundesliga", "Serie A", "Ligue 1"]
+      - name: home_team
+        data_tests: [not_null]
+      - name: away_team
+        data_tests: [not_null]

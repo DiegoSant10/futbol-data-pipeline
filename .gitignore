@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.pytest_cache/
+data/
+site/
+futbol_dbt/target/
+futbol_dbt/logs/
+futbol_dbt/dbt_packages/
+logs/
+futbol_dbt/.user.yml

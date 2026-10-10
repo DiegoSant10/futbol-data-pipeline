@@ -1,0 +1,61 @@
+# Orquestación: ejecuta el pipeline cada día, valida los datos y publica el dashboard.
+name: Pipeline de fútbol
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # todos los días a las 06:00 UTC
+  push:
+    branches: [main]
+  workflow_dispatch:        # botón "Run workflow" para lanzarlo a mano
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pipeline
+  cancel-in-progress: false
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Tests unitarios
+        run: pytest -q
+
+      # data/ guarda los JSON, sus ETags y la base DuckDB. Se restaura de la ejecución
+      # anterior para que la carga sea incremental en lugar de empezar de cero.
+      - name: Restaurar estado del pipeline
+        uses: actions/cache@v4
+        with:
+          path: data
+          key: pipeline-data-${{ github.run_id }}
+          restore-keys: pipeline-data-
+
+      - name: Ejecutar pipeline (extract, load, dbt build, dashboard)
+        run: python -m pipeline.run_pipeline
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy-dashboard:
+    needs: run-pipeline
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

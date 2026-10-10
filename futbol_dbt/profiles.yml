@@ -1,0 +1,8 @@
+futbol:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      # run_pipeline.py define DBT_DUCKDB_PATH con la ruta absoluta de la base
+      path: "{{ env_var('DBT_DUCKDB_PATH', '../data/futbol.duckdb') }}"
+      threads: 4

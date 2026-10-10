@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: standings
+    description: Clasificación por liga y temporada (3 puntos victoria, 1 empate).
+    columns:
+      - name: position
+        data_tests: [not_null]
+      - name: team
+        data_tests: [not_null]
+
+  - name: team_form
+    description: Resultados de los últimos 5 partidos de cada equipo.
+
+  - name: points_progression
+    description: Puntos acumulados de cada equipo tras cada partido.
+
+  - name: league_summary
+    description: Goles por partido y % de victorias locales, empates y visitantes.
+    columns:
+      - name: goals_per_match
+        data_tests: [not_null]
